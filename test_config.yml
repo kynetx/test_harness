@@ -1,0 +1,13 @@
+
+# cloudos_test@kynetx.com/for_testing
+eci: 07E6569E-6CE9-11E3-81D7-05AA87B7806A 
+rules_engine: kibdev.kobj.net
+
+test_1:
+   domain: test
+   type: store_item
+   attributes:
+     foo: bar
+   rids:
+    - b503129x1.prod
+     
