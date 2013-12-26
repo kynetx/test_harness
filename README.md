@@ -7,8 +7,8 @@ Test harness for KRL rulesets
 
 ## Dependencies
 
-Getopt::Std
-Data::Dumper
-YAML::XS
-Kinetic::Raise  // included
+- Getopt::Std
+- Data::Dumper
+- YAML::XS
+- Kinetic::Raise  // included
 
