@@ -33,6 +33,10 @@ my $server = $config->{'rules_engine'} || DEFAULT_RULES_ENGINE;
 my @config_keys = keys %{ $config };
 my @tests = grep(/^test_/, @config_keys);
 
+my $succ = 0;
+my $fail = 0;
+my $diag = 0;
+
 foreach my $test_key (@tests) {
   my $test = $config->{$test_key};
 #  print Dumper $test;
@@ -52,9 +56,6 @@ foreach my $test_key (@tests) {
 
   my $response = $event->raise($test->{'attributes'});
 
-  my $succ = 0;
-  my $fail = 0;
-  my $diag = 0;
   foreach my $d (@{$response->{'directives'}}) {
 
     my $opt = $d->{'options'};
@@ -90,6 +91,11 @@ foreach my $test_key (@tests) {
   print $test->{'desc'}, ": ", $succ , " suceeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
 }
 
+if ($fail) {
+  exit 1
+} else {
+  exit 0
+}
 1;
 
 sub read_config {
