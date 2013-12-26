@@ -17,13 +17,13 @@ use constant DEFAULT_RULES_ENGINE => 'kibdev.kobj.net';
 
 # global options
 use vars qw/ %opt /;
-my $opt_string = 'c:?hv';
+my $opt_string = 'c:?hvd';
 getopts( "$opt_string", \%opt ) or usage();
 
 usage() if $opt{'h'} || $opt{'?'};
 
 
-warn "No configuration file specified. Using " . DEFAULT_CONFIG_FILE unless $opt{'c'};
+print "No test file specified. Using " . DEFAULT_CONFIG_FILE . "\n" unless $opt{'c'};
 
 my $config = read_config($opt{'c'});
 my $eci = $config->{'eci'};
@@ -52,15 +52,42 @@ foreach my $test_key (@tests) {
 
   my $response = $event->raise($test->{'attributes'});
 
+  my $succ = 0;
+  my $fail = 0;
+  my $diag = 0;
   foreach my $d (@{$response->{'directives'}}) {
-    my $content_str = "";
-    if ($opt{'v'}) {
-      my $content = JSON::XS->new->decode($d->{'options'}->{'content'});
-      $content_str = JSON::XS->new->ascii->pretty->encode($content);
+
+    my $opt = $d->{'options'};
+    if ($opt->{'status'} eq 'success') {
+      $succ++;
+    } elsif (($opt->{'status'} eq 'failure')) {
+      $fail++;
+    } else {
+      $diag++;
     }
-    print $d->{'name'}, "\n";
-    print $content_str;
+
+    if ($opt{'v'}) {
+
+      my $content_str = "";
+
+      if ( $opt->{'status'} eq 'success' ||
+	   $opt->{'status'} eq 'failure' ||
+	   $opt{'d'}
+	 ) {
+	print $opt->{'status'}, ": ";
+	print $opt->{'rule'}, ": " if $opt->{'rule'};
+	print $d->{'name'}, "\n";
+      }
+
+      if ($opt{'d'}) { # print diagnositcs too
+	my $content = JSON::XS->new->decode($d->{'options'}->{'details'});
+	$content_str = JSON::XS->new->ascii->pretty->encode($content) . "\n";
+      }
+      print $content_str;
+      
+    }
   }
+  print $test->{'desc'}, ": ", $succ , " suceeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
 }
 
 1;
