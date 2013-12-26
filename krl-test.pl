@@ -6,7 +6,7 @@ use strict;
 use utf8;
 
 use Getopt::Std;
-use Data::Dumper;
+# use Data::Dumper;
 use YAML::XS;
 use POSIX qw(strftime);
 use Kinetic::Raise;
@@ -120,8 +120,10 @@ usage: $0 [-h?] -c config_file.yml
 
  -h|?      : this (help) message
  -c file   : configuration file
+ -v        : vebose, print diagnostic messges
+ -d        : pring details accompanying diagnostics. 
 
-example: $0 -c test_AWS.yml
+example: $0 -c test_AWS.yml -vd
 
 EOF
     exit;
