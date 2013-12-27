@@ -88,7 +88,7 @@ foreach my $test_key (@tests) {
       
     }
   }
-  print $test->{'desc'}, ": ", $succ , " suceeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
+  print $test->{'desc'}, ": ", $succ , " succeeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
 }
 
 if ($fail) {
