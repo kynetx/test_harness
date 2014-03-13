@@ -46,3 +46,6 @@ If a configuration file is not specified, the file test_config.yml in the curren
 - YAML::XS
 - Kinetic::Raise  // included
 
+If you want to use the Kinetc::Raise library that is included, you will need to add the following line to your .profile (/bin/sh) file so that the program can find the library:
+
+	PERL5LIB=<path to test_harness directory>; export PERL5LIB

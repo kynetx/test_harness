@@ -16,37 +16,38 @@ use constant DEFAULT_RULES_ENGINE => 'kibdev.kobj.net';
 
 
 # global options
-use vars qw/ %opt /;
+use vars qw/ %clopt /;
 my $opt_string = 'c:?hvd';
-getopts( "$opt_string", \%opt ) or usage();
+getopts( "$opt_string", \%clopt ) or usage();
 
-usage() if $opt{'h'} || $opt{'?'};
+usage() if $clopt{'h'} || $clopt{'?'};
 
 
-print "No test file specified. Using " . DEFAULT_CONFIG_FILE . "\n" unless $opt{'c'};
+print "No test file specified. Using " . DEFAULT_CONFIG_FILE . "\n" unless $clopt{'c'};
 
-my $config = read_config($opt{'c'});
+my $config = read_config($clopt{'c'});
 my $eci = $config->{'eci'};
 my $server = $config->{'rules_engine'} || DEFAULT_RULES_ENGINE;
 
 # find tests
 my @config_keys = keys %{ $config };
-my @tests = grep(/^test_/, @config_keys);
+my @tests = sort(grep(/^test_/, @config_keys));
 
-my $succ = 0;
-my $fail = 0;
-my $diag = 0;
+my $global_succ = 0;
+my $global_fail = 0;
+my $global_diag = 0;
 
 foreach my $test_key (@tests) {
   my $test = $config->{$test_key};
-#  print Dumper $test;
 
   my $options =  {'eci' => $eci,
 		  'host' => $server,
 		 };
 
+  $options->{"rids"} = $config->{"rids"} if $config->{'rids'};
   $options->{'rids'} = $test->{'rids'} if $test->{'rids'};
 
+#  print Dump $test;
 #  print Dump $options;
 
   my $event = Kinetic::Raise->new($test->{'domain'},
@@ -54,33 +55,44 @@ foreach my $test_key (@tests) {
   				  $options
   				 );
 
-  my $response = $event->raise($test->{'attributes'});
+  my $eid = $test_key."_".time;
+  my $response = $event->raise($test->{'attributes'}, {"eid" => $eid, "esl" => 1});
 
+  my $succ = 0;
+  my $fail = 0;
+  my $diag = 0;
+
+  my $ran = 0;
+  if ($clopt{"v"}) {
+      print "Test ESL: ", $response->{"_esl"}, "\n";
+  }
   foreach my $d (@{$response->{'directives'}}) {
 
     my $opt = $d->{'options'};
     if ($opt->{'status'} eq 'success') {
       $succ++;
+      $ran++;
     } elsif (($opt->{'status'} eq 'failure')) {
       $fail++;
+      $ran++;
     } else {
       $diag++;
     }
 
-    if ($opt{'v'}) {
+    if ($clopt{'v'}) {
 
       my $content_str = "";
 
       if ( $opt->{'status'} eq 'success' ||
 	   $opt->{'status'} eq 'failure' ||
-	   $opt{'d'}
+	   $clopt{'d'}
 	 ) {
 	print $opt->{'status'}, ": ";
 	print $opt->{'rule'}, ": " if $opt->{'rule'};
 	print $d->{'name'}, "\n";
       }
 
-      if ($opt{'d'}) { # print diagnositcs too
+      if ($clopt{'d'}) { # print diagnositcs too
 	my $content = JSON::XS->new->decode($d->{'options'}->{'details'});
 	$content_str = JSON::XS->new->ascii->pretty->encode($content) . "\n";
       }
@@ -88,10 +100,19 @@ foreach my $test_key (@tests) {
       
     }
   }
-  print $test->{'desc'}, ": ", $succ , " succeeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
+  $global_succ += $succ;
+  $global_fail += $fail;
+  $global_diag += $diag;
+
+  if ($ran != $test->{'expect'}) {
+      print ">> WARNING << Expected ", $test->{"expect"}, " test but ran $ran\n";
+  }
+  print $test_key, " ", $test->{'desc'}, " ($eid): ", $succ , " succeeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
 }
 
-if ($fail) {
+print "Summary: ", $global_succ , " succeeded, ", $global_fail, " failed, ", $global_diag, " diagnostic messages\n";
+
+if ($global_fail) {
   exit 1
 } else {
   exit 0
@@ -127,7 +148,7 @@ usage: $0 [-h?] -c config_file.yml
  -h|?      : this (help) message
  -c file   : configuration file
  -v        : vebose, print diagnostic messges
- -d        : pring details accompanying diagnostics. 
+ -d        : print details accompanying diagnostics. 
 
 example: $0 -c test_AWS.yml -vd
 

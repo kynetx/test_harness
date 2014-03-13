@@ -5,6 +5,7 @@ use warnings;
 
 use LWP::Simple;
 use JSON::XS;
+use Data::Dumper;
 
 use Exporter;
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
@@ -63,12 +64,14 @@ sub new {
 sub mk_url {
   my $self = shift;
   my $options = shift;
+  my $eid = shift;
 
   my $queries = [];
   foreach my $k (keys %{$options}) {
     push @{ $queries }, "$k=$options->{$k}";
   }
 
+  $eid ||= time;
   
   my $url = "";
 
@@ -80,7 +83,7 @@ sub mk_url {
 		      $self->{'event_domain'},
 		      $self->{'event_type'},
 		      join(';', @{$self->{'rids'}}),
-		      time
+		      $eid
 		      ]}) .
 	'?' . join('&', @{$queries});
   } elsif ($self->{'version'} eq 'sky') {
@@ -93,7 +96,7 @@ sub mk_url {
 		      $self->{'version'},
 		      'event',
 		      $self->{'eci'},
-		      time
+		      $eid
 		      ]}) .
 	'?' . join('&', @{$queries});
   } 
@@ -104,13 +107,18 @@ sub mk_url {
 sub raise {
   my $self = shift;
   my $options = shift;
+  my $config = shift;
 
-  my $response = get($self->mk_url($options)) || "";
+  my $esl = $self->mk_url($options, $config->{"eid"});
+  my $response = get($esl) || "";
 
   # strip comments
   $response =~ s#//.*\n##g;
 
   $response = JSON::XS->new->decode($response);
+  if ($config->{"esl"}) {
+      $response->{"_esl"} = $esl;
+  }
 
   return $response;
 }
