@@ -22,9 +22,7 @@ getopts( "$opt_string", \%clopt ) or usage();
 
 usage() if $clopt{'h'} || $clopt{'?'};
 
-
 print "No test file specified. Using " . DEFAULT_CONFIG_FILE . "\n" unless $clopt{'c'};
-
 my $config = read_config($clopt{'c'});
 my $eci = $config->{'eci'};
 my $server = $config->{'rules_engine'} || DEFAULT_RULES_ENGINE;
@@ -32,6 +30,10 @@ my $server = $config->{'rules_engine'} || DEFAULT_RULES_ENGINE;
 # find tests
 my @config_keys = keys %{ $config };
 my @tests = sort(grep(/^test_/, @config_keys));
+
+#my %spec_tests = map { $_ => 1 } split(/;/, $clopt{"t"});
+
+
 
 my $global_succ = 0;
 my $global_fail = 0;
@@ -64,7 +66,7 @@ foreach my $test_key (@tests) {
 
   my $ran = 0;
   if ($clopt{"v"}) {
-      print "Test ESL: ", $response->{"_esl"}, "\n";
+      print "Test ESL: ", $response->{"_esl"}, "\n\n";
   }
   foreach my $d (@{$response->{'directives'}}) {
 
@@ -87,9 +89,13 @@ foreach my $test_key (@tests) {
 	   $opt->{'status'} eq 'failure' ||
 	   $clopt{'d'}
 	 ) {
-	print $opt->{'status'}, ": ";
+	print ">> " if $opt->{'status'} eq 'failure';
+	print $opt->{'status'}, " ";	
+	print "<< " if $opt->{'status'} eq 'failure';
 	print $opt->{'rule'}, ": " if $opt->{'rule'};
-	print $d->{'name'}, "\n";
+	print $d->{'name'};
+	print $opt->{"msg"} if $opt->{"msg"};
+	print "\n";
       }
 
       if ($clopt{'d'}) { # print diagnositcs too
@@ -107,7 +113,7 @@ foreach my $test_key (@tests) {
   if ($ran != $test->{'expect'}) {
       print ">> WARNING << Expected ", $test->{"expect"}, " test but ran $ran\n";
   }
-  print $test_key, " ", $test->{'desc'}, " ($eid): ", $succ , " succeeded, ", $fail, " failed, ", $diag, " diagnostic messages\n";
+  print $test_key, " ", $test->{'desc'}, " ($eid): ", $succ , " succeeded, ", $fail, " failed, ", $diag, " diagnostic messages\n---------------------------------- $eid ---------------------------------\n\n";
 }
 
 print "Summary: ", $global_succ , " succeeded, ", $global_fail, " failed, ", $global_diag, " diagnostic messages\n";
@@ -149,6 +155,7 @@ usage: $0 [-h?] -c config_file.yml
  -c file   : configuration file
  -v        : vebose, print diagnostic messges
  -d        : print details accompanying diagnostics. 
+ -t        : test to run as a semicolon separated list of names
 
 example: $0 -c test_AWS.yml -vd
 
