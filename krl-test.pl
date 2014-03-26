@@ -17,7 +17,7 @@ use constant DEFAULT_RULES_ENGINE => 'kibdev.kobj.net';
 
 # global options
 use vars qw/ %clopt /;
-my $opt_string = 'c:?hvd';
+my $opt_string = 'c:?hvdt:';
 getopts( "$opt_string", \%clopt ) or usage();
 
 usage() if $clopt{'h'} || $clopt{'?'};
@@ -31,8 +31,8 @@ my $server = $config->{'rules_engine'} || DEFAULT_RULES_ENGINE;
 my @config_keys = keys %{ $config };
 my @tests = sort(grep(/^test_/, @config_keys));
 
-#my %spec_tests = map { $_ => 1 } split(/;/, $clopt{"t"});
-
+my %spec_tests;
+$spec_tests{$_} = 1 for split(/,/, $clopt{"t"});
 
 
 my $global_succ = 0;
@@ -41,6 +41,12 @@ my $global_diag = 0;
 
 foreach my $test_key (@tests) {
   my $test = $config->{$test_key};
+
+  if ( %spec_tests &&
+      ! $spec_tests{$test_key}) {
+      print "Skipping $test_key because it's not in the test list\n" if $clopt{"v"};
+      next;
+  }
 
   my $options =  {'eci' => $eci,
 		  'host' => $server,
@@ -66,7 +72,7 @@ foreach my $test_key (@tests) {
 
   my $ran = 0;
   if ($clopt{"v"}) {
-      print "Test ESL: ", $response->{"_esl"}, "\n\n";
+      print "\nTest ESL: ", $response->{"_esl"}, "\n\n";
   }
   foreach my $d (@{$response->{'directives'}}) {
 
@@ -154,8 +160,8 @@ usage: $0 [-h?] -c config_file.yml
  -h|?      : this (help) message
  -c file   : configuration file
  -v        : vebose, print diagnostic messges
- -d        : print details accompanying diagnostics. 
- -t        : test to run as a semicolon separated list of names
+ -d        : print details accompanying diagnostics (no effect wthout -v switch). 
+ -t        : test to run as a comma separated list of names
 
 example: $0 -c test_AWS.yml -vd
 
